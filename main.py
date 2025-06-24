@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import logging
 import os
 
-BOT_TOKEN = "YOUR_BOT_API_TOKEN"  # replace with your actual token
+BOT_TOKEN = "7698290595:AAHO-M-q2_D3wMUYDprq00jaZ_Gk1CG2ZqM"  # replace with your actual token
 
 PORT = int(os.environ.get("PORT", 8080))  # Koyeb will expose this port
 WEBHOOK_URL = "https://YOUR-KOYEB-APP.koyeb.app"  # replace this with your real Koyeb app URL
