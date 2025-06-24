@@ -8,19 +8,16 @@ from datetime import datetime, timedelta
 import logging
 import os
 
-BOT_TOKEN = "7698290595:AAHO-M-q2_D3wMUYDprq00jaZ_Gk1CG2ZqM"  # replace with your actual token
-
-PORT = int(os.environ.get("PORT", 8080))  # Koyeb will expose this port
-WEBHOOK_URL = "https://YOUR-KOYEB-APP.koyeb.app"  # replace this with your real Koyeb app URL
+BOT_TOKEN = "YOUR_BOT_TOKEN"  # Replace with your real token (and regenerate if it was leaked)
+WEBHOOK_URL = "https://auto-delete.koyeb.app"  # ✅ Replace with your actual Koyeb app URL
+PORT = int(os.environ.get("PORT", 8080))
 
 chat_delete_times = {}
 scheduler = AsyncIOScheduler()
 scheduler.start()
 
-# Logging
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-# Command handler
 async def set_delete_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) != 1 or not context.args[0].isdigit():
         await update.message.reply_text("Usage: /setdeletetime <seconds>")
@@ -30,7 +27,6 @@ async def set_delete_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_delete_times[chat_id] = seconds
     await update.message.reply_text(f"Messages will now be deleted after {seconds} seconds.")
 
-# Message handler
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     chat_id = message.chat_id
@@ -56,24 +52,23 @@ async def delete_message(app, chat_id, message_id):
     except Exception as e:
         print(f"Error deleting message: {e}")
 
-# Webhook setup
+async def webhook_handler(request):
+    data = await request.json()
+    await request.app["bot"].update_queue.put(Update.de_json(data, request.app["bot"].bot))
+    return web.Response()
+
 async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("setdeletetime", set_delete_time))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
-    # Set webhook
     await app.bot.set_webhook(url=f"{WEBHOOK_URL}/webhook")
 
-    # AIOHTTP Web Server
-    async def handler(request):
-        data = await request.json()
-        await app.update_queue.put(Update.de_json(data, app.bot))
-        return web.Response()
-
     web_app = web.Application()
-    web_app.add_routes([web.post("/webhook", handler)])
+    web_app["bot"] = app
+    web_app.add_routes([web.post("/webhook", webhook_handler)])
+
     runner = web.AppRunner(web_app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", PORT)
@@ -81,7 +76,6 @@ async def main():
 
     print(f"Bot running via webhook at {WEBHOOK_URL}/webhook")
 
-    # Keep running
     import asyncio
     while True:
         await asyncio.sleep(3600)
@@ -89,3 +83,4 @@ async def main():
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
+    
